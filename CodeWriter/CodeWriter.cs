@@ -83,10 +83,115 @@ namespace Vmtranslator.CodeWriter
             }
         }
 
-        // Esboço do método de Push/Pop
-        public void WritePushPop(string commandType, string segment, int index)
+        // Gera código para empilhar valores (PUSH)
+        public void WritePush(string segment, int index)
         {
-            // Código para debug: escreve o comando VM original como comentário no Assembly
+            _writer.WriteLine($"// push {segment} {index}");
+
+            if (segment == "constant")
+            {
+                // constant i: *SP = i, SP++
+                _writer.WriteLine($"@{index}");
+                _writer.WriteLine("D=A");
+            }
+            else if (segment == "local" || segment == "argument" || segment == "this" || segment == "that")
+            {
+                // addr = segmentPointer + i, *SP = *addr, SP++
+                string symbol = GetSegmentSymbol(segment);
+                _writer.WriteLine($"@{index}");
+                _writer.WriteLine("D=A");
+                _writer.WriteLine($"@{symbol}");
+                _writer.WriteLine("A=M+D"); // Vai para o endereço base + índice
+                _writer.WriteLine("D=M");   // Pega o valor do endereço e guarda em D
+            }
+            else if (segment == "temp")
+            {
+                // addr = 5 + i, *SP = *addr, SP++
+                int addr = 5 + index;
+                _writer.WriteLine($"@{addr}");
+                _writer.WriteLine("D=M");
+            }
+            else if (segment == "pointer")
+            {
+                // pointer 0 = THIS (3), pointer 1 = THAT (4)
+                int addr = 3 + index;
+                _writer.WriteLine($"@{addr}");
+                _writer.WriteLine("D=M");
+            }
+            else if (segment == "static")
+            {
+                // Usa o nome do arquivo para garantir escopo estático
+                _writer.WriteLine($"@{_filename}.{index}");
+                _writer.WriteLine("D=M");
+            }
+
+            // Bloco comum a todos os PUSH: Põe o valor guardado em 'D' no topo da pilha e avança SP
+            _writer.WriteLine("@SP");
+            _writer.WriteLine("A=M");
+            _writer.WriteLine("M=D");
+            _writer.WriteLine("@SP");
+            _writer.WriteLine("M=M+1");
+        }
+
+        // Gera código para desempilhar valores (POP)
+        public void WritePop(string segment, int index)
+        {
+            _writer.WriteLine($"// pop {segment} {index}");
+
+            if (segment == "local" || segment == "argument" || segment == "this" || segment == "that")
+            {
+                // addr = segmentPointer + i, SP--, *addr = *SP
+                string symbol = GetSegmentSymbol(segment);
+                
+                // Calcula o endereço destino e guarda no registo temporário R13
+                _writer.WriteLine($"@{index}");
+                _writer.WriteLine("D=A");
+                _writer.WriteLine($"@{symbol}");
+                _writer.WriteLine("D=M+D"); // D = base + índice
+                _writer.WriteLine("@R13");
+                _writer.WriteLine("M=D");   // R13 guarda o endereço de destino
+
+                // Tira o valor do topo da pilha e guarda em D
+                _writer.WriteLine("@SP");
+                _writer.WriteLine("AM=M-1");
+                _writer.WriteLine("D=M");
+
+                // Vai para o endereço guardado em R13 e escreve o valor
+                _writer.WriteLine("@R13");
+                _writer.WriteLine("A=M");
+                _writer.WriteLine("M=D");
+            }
+            else if (segment == "temp" || segment == "pointer")
+            {
+                // Temp e Pointer são blocos fixos, não precisam do R13
+                int addr = (segment == "temp") ? 5 + index : 3 + index;
+                
+                _writer.WriteLine("@SP");
+                _writer.WriteLine("AM=M-1");
+                _writer.WriteLine("D=M"); // D guarda o valor desempilhado
+                
+                _writer.WriteLine($"@{addr}");
+                _writer.WriteLine("M=D"); // Escreve direto no endereço
+            }
+            else if (segment == "static")
+            {
+                _writer.WriteLine("@SP");
+                _writer.WriteLine("AM=M-1");
+                _writer.WriteLine("D=M");
+                
+                _writer.WriteLine($"@{_filename}.{index}");
+                _writer.WriteLine("M=D");
+            }
+        }
+
+        // Método auxiliar para traduzir o nome do segmento para o símbolo do Assembly
+        private string GetSegmentSymbol(string segment)
+        {
+            if (segment == "local") return "LCL";
+            if (segment == "argument") return "ARG";
+            if (segment == "this") return "THIS";
+            if (segment == "that") return "THAT";
+            return "";
         }
 
         // Finaliza e fecha o arquivo
