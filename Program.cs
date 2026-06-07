@@ -29,24 +29,25 @@ Console.WriteLine($"Iniciando tradução de: {Path.GetFileName(inputPath)}");
 Parser parser = new Parser(inputPath);
 CodeWriter codeWriter = new CodeWriter(outputPath);
 
-// O Loop Principal
+// 4. O Loop Principal
 while (parser.HasMoreCommands())
 {
     parser.Advance();
     
-    CommandType type = parser.CommandType();
+    // ATUALIZADO AQUI: VmCommandType em vez de CommandType
+    VmCommandType type = parser.CommandType();
 
     switch (type)
     {
-        case CommandType.C_ARITHMETIC:
+        case VmCommandType.C_ARITHMETIC:
             codeWriter.WriteArithmetic(parser.Arg1());
             break;
             
-        case CommandType.C_PUSH:
+        case VmCommandType.C_PUSH:
             codeWriter.WritePush(parser.Arg1(), parser.Arg2());
             break;
             
-        case CommandType.C_POP:
+        case VmCommandType.C_POP:
             codeWriter.WritePop(parser.Arg1(), parser.Arg2());
             break;
     }
