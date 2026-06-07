@@ -34,7 +34,6 @@ while (parser.HasMoreCommands())
 {
     parser.Advance();
     
-    // ATUALIZADO AQUI: VmCommandType em vez de CommandType
     VmCommandType type = parser.CommandType();
 
     switch (type)
