@@ -4,12 +4,18 @@ using System.IO;
 
 namespace Vmtranslator.Parser
 {
-    // Enum para representar os tipos de comando VM, facilitando a leitura e manutenção do código
+    // Comandos do VM
     public enum VmCommandType
     {
         C_ARITHMETIC,
         C_PUSH,
-        C_POP
+        C_POP,
+        C_LABEL,
+        C_GOTO,
+        C_IF,
+        C_FUNCTION,
+        C_CALL,
+        C_RETURN
     }
 
     public class Parser
@@ -60,20 +66,25 @@ namespace Vmtranslator.Parser
             }
         }
 
-        // Determina o tipo do comando atual com base na primeira palavra 
+        // Mapeamento de strings para os tipos do Enum
         public VmCommandType CommandType()
         {
             string cmd = _currentArgs[0].ToLower();
 
             if (cmd == "push") return VmCommandType.C_PUSH;
             if (cmd == "pop") return VmCommandType.C_POP;
+            if (cmd == "label") return VmCommandType.C_LABEL;
+            if (cmd == "goto") return VmCommandType.C_GOTO;
+            if (cmd == "if-goto") return VmCommandType.C_IF;
+            if (cmd == "function") return VmCommandType.C_FUNCTION;
+            if (cmd == "call") return VmCommandType.C_CALL;
+            if (cmd == "return") return VmCommandType.C_RETURN;
             
             return VmCommandType.C_ARITHMETIC;
         }
 
         public string Arg1()
         {
-            // Usando o novo nome do Enum aqui também
             if (CommandType() == VmCommandType.C_ARITHMETIC)
             {
                 return _currentArgs[0];
