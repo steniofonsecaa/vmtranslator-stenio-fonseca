@@ -218,6 +218,89 @@ namespace Vmtranslator.CodeWriter
             _writer.WriteLine("D;JNE");
         }
 
+        // Escreve o código de uma função (function)
+        public void WriteFunction(string functionName, int numLocals)
+        {
+            // Atualiza o escopo para a nova função (usado nos labels)
+            _currentFunction = functionName;
+
+            // Escreve o rótulo de entrada da função
+            _writer.WriteLine($"({functionName})");
+
+            // Empilha '0' para cada variável local (inicialização)
+            for (int i = 0; i < numLocals; i++)
+            {
+                _writer.WriteLine("@SP");
+                _writer.WriteLine("A=M");
+                _writer.WriteLine("M=0");
+                
+                _writer.WriteLine("@SP");
+                _writer.WriteLine("M=M+1");
+            }
+        }
+
+        // Escreve o comando de retorno
+        public void WriteReturn()
+        {
+            // endFrame = LCL (Salva LCL em R14 temporariamente)
+            _writer.WriteLine("@LCL");
+            _writer.WriteLine("D=M");
+            _writer.WriteLine("@R14");
+            _writer.WriteLine("M=D");
+
+            // retAddr = *(endFrame - 5) (Salva o endereço de retorno em R15)
+            _writer.WriteLine("@5");
+            _writer.WriteLine("A=D-A"); 
+            _writer.WriteLine("D=M");
+            _writer.WriteLine("@R15");
+            _writer.WriteLine("M=D");
+
+            // *ARG = pop() (Coloca o valor de retorno no topo do chamador)
+            _writer.WriteLine("@SP");
+            _writer.WriteLine("AM=M-1");
+            _writer.WriteLine("D=M");
+            _writer.WriteLine("@ARG");
+            _writer.WriteLine("A=M");
+            _writer.WriteLine("M=D");
+
+            // SP = ARG + 1 (Restaura o topo da pilha para logo após o valor de retorno)
+            _writer.WriteLine("@ARG");
+            _writer.WriteLine("D=M+1");
+            _writer.WriteLine("@SP");
+            _writer.WriteLine("M=D");
+
+            // Restaura THAT, THIS, ARG, LCL do frame do chamador
+            // Decrementando R14 a cada passo para varrer o frame de trás para frente
+            _writer.WriteLine("@R14");
+            _writer.WriteLine("AM=M-1"); // endFrame - 1
+            _writer.WriteLine("D=M");
+            _writer.WriteLine("@THAT");
+            _writer.WriteLine("M=D");
+
+            _writer.WriteLine("@R14");
+            _writer.WriteLine("AM=M-1"); // endFrame - 2
+            _writer.WriteLine("D=M");
+            _writer.WriteLine("@THIS");
+            _writer.WriteLine("M=D");
+
+            _writer.WriteLine("@R14");
+            _writer.WriteLine("AM=M-1"); // endFrame - 3
+            _writer.WriteLine("D=M");
+            _writer.WriteLine("@ARG");
+            _writer.WriteLine("M=D");
+
+            _writer.WriteLine("@R14");
+            _writer.WriteLine("AM=M-1"); // endFrame - 4
+            _writer.WriteLine("D=M");
+            _writer.WriteLine("@LCL");
+            _writer.WriteLine("M=D");
+
+            // goto retAddr (Salta para o endereço salvo em R15)
+            _writer.WriteLine("@R15");
+            _writer.WriteLine("A=M");
+            _writer.WriteLine("0;JMP");
+        }
+
         // Finaliza e fecha o arquivo
         public void Close()
         {
