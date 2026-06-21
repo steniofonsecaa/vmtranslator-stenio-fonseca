@@ -8,6 +8,7 @@ namespace Vmtranslator.CodeWriter
         private StreamWriter _writer;
         private string _filename;
         private int _jumpCounter; // Necessário para gerar rótulos únicos em eq, gt, lt
+        private string _currentFunction = "null";
 
         // Construtor: Abre arquivo .asm para escrita
         public CodeWriter(string outputPath)
@@ -192,6 +193,29 @@ namespace Vmtranslator.CodeWriter
             if (segment == "this") return "THIS";
             if (segment == "that") return "THAT";
             return "";
+        }
+
+        // Gera código para definir um rótulo (label)
+        public void WriteLabel(string label)
+        {
+            _writer.WriteLine($"({_currentFunction}${label})");
+        }
+
+        // Gera código para salto incondicional (goto)
+        public void WriteGoto(string label)
+        {
+            _writer.WriteLine($"@{_currentFunction}${label}");
+            _writer.WriteLine("0;JMP");
+        }
+        
+        // Gera código para salto condicional (if-goto)
+        public void WriteIf(string label)
+        {
+            _writer.WriteLine("@SP");
+            _writer.WriteLine("AM=M-1");
+            _writer.WriteLine("D=M");
+            _writer.WriteLine($"@{_currentFunction}${label}");
+            _writer.WriteLine("D;JNE");
         }
 
         // Finaliza e fecha o arquivo
