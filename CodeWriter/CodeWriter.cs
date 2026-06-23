@@ -9,6 +9,7 @@ namespace Vmtranslator.CodeWriter
         private string _filename;
         private int _jumpCounter; // Necessário para gerar rótulos únicos em eq, gt, lt
         private string _currentFunction = "null";
+        private int _callCounter = 0;
 
         // Construtor: Abre arquivo .asm para escrita
         public CodeWriter(string outputPath)
@@ -185,6 +186,16 @@ namespace Vmtranslator.CodeWriter
             }
         }
 
+        // Método para empilhar o valor que estiver atualmente no registrador D
+        private void PushD()
+        {
+            _writer.WriteLine("@SP");
+            _writer.WriteLine("A=M");
+            _writer.WriteLine("M=D");
+            _writer.WriteLine("@SP");
+            _writer.WriteLine("M=M+1");
+        }
+
         // Método auxiliar para traduzir o nome do segmento para o símbolo do Assembly
         private string GetSegmentSymbol(string segment)
         {
@@ -299,6 +310,56 @@ namespace Vmtranslator.CodeWriter
             _writer.WriteLine("@R15");
             _writer.WriteLine("A=M");
             _writer.WriteLine("0;JMP");
+        }
+
+        public void WriteCall(string functionName, int numArgs)
+        {
+            // Cria um rótulo único para o retorno
+            string returnLabel = $"{_currentFunction}$ret.{_callCounter}";
+            _callCounter++;
+
+            // Empilha returnAddress
+            _writer.WriteLine($"@{returnLabel}");
+            _writer.WriteLine("D=A");
+            PushD();
+
+            // Empilha LCL, ARG, THIS, THAT
+            _writer.WriteLine("@LCL");
+            _writer.WriteLine("D=M");
+            PushD();
+
+            _writer.WriteLine("@ARG");
+            _writer.WriteLine("D=M");
+            PushD();
+
+            _writer.WriteLine("@THIS");
+            _writer.WriteLine("D=M");
+            PushD();
+
+            _writer.WriteLine("@THAT");
+            _writer.WriteLine("D=M");
+            PushD();
+
+            // Ajusta ARG = SP - 5 - nArgs
+            _writer.WriteLine("@SP");
+            _writer.WriteLine("D=M");
+            _writer.WriteLine($"@{5 + numArgs}");
+            _writer.WriteLine("D=D-A");
+            _writer.WriteLine("@ARG");
+            _writer.WriteLine("M=D");
+
+            // Salva LCL = SP
+            _writer.WriteLine("@SP");
+            _writer.WriteLine("D=M");
+            _writer.WriteLine("@LCL");
+            _writer.WriteLine("M=D");
+
+            // goto fname (Transfere o controle para a função chamada)
+            _writer.WriteLine($"@{functionName}");
+            _writer.WriteLine("0;JMP");
+
+            // Define o rótulo de retorno: (fname$retAddr)
+            _writer.WriteLine($"({returnLabel})");
         }
 
         // Finaliza e fecha o arquivo
