@@ -20,6 +20,27 @@ namespace Vmtranslator.CodeWriter
             _jumpCounter = 0;
         }
 
+        // Inicializa a VM (Bootstrap)
+        public void WriteInit()
+        {
+            _writer.WriteLine("// Bootstrap code");
+            
+            // Configura SP = 256
+            _writer.WriteLine("@256");
+            _writer.WriteLine("D=A");
+            _writer.WriteLine("@SP");
+            _writer.WriteLine("M=D");
+
+            // Chama a função inicial Sys.init com 0 argumentos
+            WriteCall("Sys.init", 0);
+        }
+
+        // Atualiza o nome do arquivo atual
+        public void SetFileName(string fileName)
+        {
+            _filename = fileName;
+        }
+
         // Gera código Assembly para os comandos matemáticos e lógicos
         public void WriteArithmetic(string cmd)
         {
